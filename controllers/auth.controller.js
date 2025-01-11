@@ -45,7 +45,7 @@ const loginUser = async(req, res) =>{
 			message: "Insufficient data for Authentication!!",
 		});
 	try {
-		const foundUser = await User.findOne({ email });
+		const foundUser = await User.findOne({ email: email }).exec();
 		if (!Boolean(foundUser))
 			return res.status(400).json({
 				success: false,
@@ -61,7 +61,7 @@ const loginUser = async(req, res) =>{
 
 		const {_id, userName, role} = foundUser;
 
-		const token = jwt.sign({ _id, userName, email, role }, "secretOrPrivateKey",{expiresIn:'2m'});
+		const token = jwt.sign({ _id, userName, email, role }, "secretOrPrivateKey", { expiresIn: '30m' });
 		
 		return res.cookie('token',token, {httpOnly:true,secure:false}).status(200).json({
 			success: true,
