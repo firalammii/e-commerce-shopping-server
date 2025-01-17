@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs/promises';
 import Joi from 'joi';
 import Product from '../../models/product.model.js';
 import { cloudinaryUpload } from "../../helpers/fileUploader.js";
@@ -24,11 +26,38 @@ export const handleImageUpload = async (req, res) => {
 	}
 };
 
+export const handleDeleteImage = async (req, res) => {
+	try {
+		const { image } = req.params;
+		const result = await deleteImage(`public/images/products/${image}`);
+		return res.status(200).json({
+			success: true,
+			message: "Deletion is Successful",
+			image: result,
+		});
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+};
+export const deleteImage = async (imgPath) => {
+	try {
+		const result = await fs.rm(imgPath);
+		return result;
+	} catch (error) {
+		console.error(error);
+		return error;
+	}
+};
+
 export const fetchProducts = async (req, res) => {
 	// const { searchTerm } = req.query;
 	const { amount, title, description, category, brand } = req.query;
 	let searchCriteria = {};
-	if (amount) searchCriteria.amount = { $lte: { amount } };
+	if (amount) searchCriteria.amount = { $lte: amount };
 	if (title) searchCriteria.title = { $regex: title, $options: 'i' };
 	if (description) searchCriteria.description = { $regex: description, $options: 'i' };
 	if (brand) searchCriteria.brand = { $regex: brand, $options: 'i' };
