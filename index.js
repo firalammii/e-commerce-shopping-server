@@ -9,9 +9,10 @@ import morgan from 'morgan';
 
 import authRoute from './routes/auth.route.js';
 import productRoute from './routes/admin/products.route.js';
+import mongoose from 'mongoose';
 
 dotenv.config();
-connectDB();
+
 
 const app = express();
 
@@ -31,10 +32,15 @@ app
 	.use('/api/admin/products', productRoute)
 
 const port = process.env.PORT || 3500;
-app.listen(port, 
-	(err)=> {
-		if(err) 
+const uri = process.env.dbURI;
+
+mongoose.connect(uri)
+	.then(() => console.log("connected to MongoDB Atlas"))
+	.then(() => app.listen(port,
+		(err) => {
+			if (err)
 			console.error(err);
-		else 
+			else
 			console.log(`server is up and running on port: ${port}`);
-	})
+		}))
+	.catch(err => console.error(`Unable to Connect\n ${err}`));

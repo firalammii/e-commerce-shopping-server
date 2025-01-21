@@ -1,4 +1,3 @@
-import path from 'path';
 import fs from 'fs/promises';
 import Joi from 'joi';
 import Product from '../../models/product.model.js';
@@ -54,15 +53,16 @@ export const deleteImage = async (imgPath) => {
 };
 
 export const fetchProducts = async (req, res) => {
-	// const { searchTerm } = req.query;
-	const { amount, title, description, category, brand } = req.query;
-	let searchCriteria = {};
-	if (amount) searchCriteria.amount = { $lte: amount };
-	if (title) searchCriteria.title = { $regex: title, $options: 'i' };
-	if (description) searchCriteria.description = { $regex: description, $options: 'i' };
-	if (brand) searchCriteria.brand = { $regex: brand, $options: 'i' };
-	if (category && category.length > 0) searchCriteria.category = { $all: category };
+	const { amount, title, category, strict, brand } = req.query;
+	console.log(brand, category);
 
+	let searchCriteria = {};
+	if (amount) searchCriteria.amount = { $lte: parseInt(amount) };
+	if (title) searchCriteria.title = { $regex: title, $options: 'i' };
+	if (brand && brand.length > 0) searchCriteria.brand = { $in: brand.split(',') };
+	if (category && category.length > 0) searchCriteria.category = strict ? { $all: category.split(',') } : { $elemMatch: { $in: category.split(',') } };
+
+	console.log("searchCriteria: ", searchCriteria);
 	try {
 		const products = await Product.find(searchCriteria)
 			.sort({ createdAt: -1 });
@@ -72,6 +72,7 @@ export const fetchProducts = async (req, res) => {
 			products
 		});
 	} catch (error) {
+		console.error(error)
 		return res.status(500).json({
 			success: false,
 			message: "Getting all Products failed due to" + error.message,
@@ -128,8 +129,8 @@ export const updateProducts = async (req, res) => {
 	try {
 		const product = await Product.findById(id);
 		if (!product) throw new Error('No Such Product is Found');
-		const { imageURL, price, salePrice, amount, title, description, category } = req.body;
-
+		const { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
+		console.log(req.body)
 		product.title = title || product.title;
 		product.description = description || product.description;
 		product.brand = brand || product.brand;
@@ -146,6 +147,7 @@ export const updateProducts = async (req, res) => {
 			updated
 		});
 	} catch (error) {
+		console.error(error);
 		return res.status(500).json({
 			success: false,
 			message: error.message,
@@ -155,11 +157,11 @@ export const updateProducts = async (req, res) => {
 export const deleteProducts = async (req, res) => {
 	const { id } = req.params;
 	try {
-		const deleted = await Product.delete(id);
+		const deleted = await Product.findByIdAndDelete(id);
 		return res.status(200).json({
 			success: true,
-			message: "Successfully Updated",
-			deleted
+			message: "Successfully Deleted",
+			deleted,
 		});
 	} catch (error) {
 		return res.status(500).json({

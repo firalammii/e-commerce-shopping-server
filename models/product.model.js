@@ -25,12 +25,12 @@ const productSchema = mongoose.Schema({
 	price: {
 		type: Number,
 		required: true,
-		default: 0.00,
+		default: 0,
 	},
 	salePrice: {
 		type: Number,
 		required: true,
-		default: 0.00,
+		default: 0,
 	},
 	amount: {
 		type: Number,
