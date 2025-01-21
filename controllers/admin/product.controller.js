@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import Joi from 'joi';
 import Product from '../../models/product.model.js';
 import { cloudinaryUpload } from "../../helpers/fileUploader.js";
+import { Session } from 'inspector/promises';
 
 export const handleImageUpload = async (req, res) => {
 	try {
@@ -29,6 +30,7 @@ export const handleDeleteImage = async (req, res) => {
 	try {
 		const { image } = req.params;
 		const result = await deleteImage(`public/images/products/${image}`);
+
 		return res.status(200).json({
 			success: true,
 			message: "Deletion is Successful",
@@ -62,7 +64,6 @@ export const fetchProducts = async (req, res) => {
 	if (brand && brand.length > 0) searchCriteria.brand = { $in: brand.split(',') };
 	if (category && category.length > 0) searchCriteria.category = strict ? { $all: category.split(',') } : { $elemMatch: { $in: category.split(',') } };
 
-	console.log("searchCriteria: ", searchCriteria);
 	try {
 		const products = await Product.find(searchCriteria)
 			.sort({ createdAt: -1 });
@@ -83,10 +84,14 @@ export const fetchProducts = async (req, res) => {
 export const createProducts = async (req, res) => {
 	try {
 		const { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
+
 		const { error } = joiValidate({ imageURL, price, salePrice, amount, title, description, category, brand });
 		if (error) throw new Error(error);
+
 		const product = await Product.create({ imageURL, price, salePrice, amount, title, description, category, brand });
+
 		const saved = await product.save();
+
 		return res.status(200).json({
 			success: true,
 			message: "Successfully Added",
@@ -130,7 +135,7 @@ export const updateProducts = async (req, res) => {
 		const product = await Product.findById(id);
 		if (!product) throw new Error('No Such Product is Found');
 		const { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
-		console.log(req.body)
+
 		product.title = title || product.title;
 		product.description = description || product.description;
 		product.brand = brand || product.brand;
@@ -158,6 +163,8 @@ export const deleteProducts = async (req, res) => {
 	const { id } = req.params;
 	try {
 		const deleted = await Product.findByIdAndDelete(id);
+		await deleteImage(`public/images/products/${deleted.imageURL}`);
+
 		return res.status(200).json({
 			success: true,
 			message: "Successfully Deleted",
