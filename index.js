@@ -25,7 +25,7 @@ app
 
 app.use(morgan('tiny'));
 
-app.get('/', (req,res)=> res.send('e-commerce server'));
+app.get('/', (req, res) => res.json({ message: 'e-commerce server' }));
 
 app
 	.use('/api/auth', authRoute)
