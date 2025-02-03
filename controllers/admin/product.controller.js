@@ -1,8 +1,9 @@
 import fs from 'fs/promises';
 import Joi from 'joi';
-import Product from '../../models/product.model.js';
+import { ProductModel } from '../../models/product.model.js';
 import { cloudinaryUpload } from "../../helpers/fileUploader.js";
 import { Session } from 'inspector/promises';
+import { ReviewModel } from '../../models/reviews.model.js';
 
 export const handleImageUpload = async (req, res) => {
 	try {
@@ -55,8 +56,7 @@ export const deleteImage = async (imgPath) => {
 };
 
 export const fetchProducts = async (req, res) => {
-	const { amount, title, category, strict, brand } = req.query;
-	console.log(brand, category);
+	const { amount, title, category, strict, brand, sortBy } = req.query;
 
 	let searchCriteria = {};
 	if (amount) searchCriteria.amount = { $lte: parseInt(amount) };
@@ -64,13 +64,22 @@ export const fetchProducts = async (req, res) => {
 	if (brand && brand.length > 0) searchCriteria.brand = { $in: brand.split(',') };
 	if (category && category.length > 0) searchCriteria.category = strict ? { $all: category.split(',') } : { $elemMatch: { $in: category.split(',') } };
 
+	let orderBy = {};
+	if (sortBy) {
+		const sorting = sortBy.split('-');
+		orderBy = { [sorting[0]]: sorting[1] === 'asc' ? 1 : -1 };
+	} else orderBy = { createdAt: -1 }
+
 	try {
-		const products = await Product.find(searchCriteria)
-			.sort({ createdAt: -1 });
+		const products = await ProductModel
+			.find(searchCriteria)
+			.sort(orderBy);
+		const totalProds = await ProductModel.countDocuments(searchCriteria)
 		return res.status(200).json({
 			success: true,
 			message: "Getting all Products is Successful",
-			products
+			products,
+			totalProds,
 		});
 	} catch (error) {
 		console.error(error)
@@ -81,14 +90,17 @@ export const fetchProducts = async (req, res) => {
 	}
 };
 
-export const createProducts = async (req, res) => {
+export const createProduct = async (req, res) => {
 	try {
-		const { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
+		let { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
+
+		if (!salePrice || salePrice == 0)
+			salePrice = price;
 
 		const { error } = joiValidate({ imageURL, price, salePrice, amount, title, description, category, brand });
 		if (error) throw new Error(error);
 
-		const product = await Product.create({ imageURL, price, salePrice, amount, title, description, category, brand });
+		const product = await ProductModel.create({ imageURL, price, salePrice, amount, title, description, category, brand });
 
 		const saved = await product.save();
 
@@ -114,7 +126,7 @@ export const createProductsMulter = async (req, res) => {
 
 		const { error } = joiValidate({ imageURL, price, salePrice, amount, title, description, category, brand });
 		if (error) throw new Error(error);
-		const product = await Product.create({ imageURL, price, salePrice, amount, title, description, category, brand });
+		const product = await ProductModel.create({ imageURL, price, salePrice, amount, title, description, category, brand });
 		const saved = await product.save();
 		return res.status(200).json({
 			success: true,
@@ -129,20 +141,21 @@ export const createProductsMulter = async (req, res) => {
 	}
 };
 
-export const updateProducts = async (req, res) => {
+export const updateProduct = async (req, res) => {
 	const { id } = req.params;
 	try {
-		const product = await Product.findById(id);
+		const product = await ProductModel.findById(id);
 		if (!product) throw new Error('No Such Product is Found');
-		const { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
-
+		let { imageURL, price, salePrice, amount, title, description, category, brand } = req.body;
+		if (!salePrice || salePrice == 0)
+			product.salePrice = price;
+		else product.salePrice = salePrice || product.salePrice;
 		product.title = title || product.title;
 		product.description = description || product.description;
 		product.brand = brand || product.brand;
 		product.category = category || product.category;
 		product.imageURL = imageURL || product.imageURL;
 		product.price = price || product.price;
-		product.salePrice = salePrice || product.salePrice;
 		product.amount = amount || product.amount;
 
 		const updated = await product.save();
@@ -159,16 +172,33 @@ export const updateProducts = async (req, res) => {
 		});
 	}
 };
-export const deleteProducts = async (req, res) => {
+export const deleteProduct = async (req, res) => {
 	const { id } = req.params;
 	try {
-		const deleted = await Product.findByIdAndDelete(id);
-		await deleteImage(`public/images/products/${deleted.imageURL}`);
-
+		const prod = await ProductModel.findById(id);
+		prod.deleted = !prod.deleted;
+		// await deleteImage(`public/images/products/${deleted.imageURL}`);
+		const deleted = await prod.save();
 		return res.status(200).json({
 			success: true,
-			message: "Successfully Deleted",
+			message: `Successfully ${deleted.deleted ? 'Deleted' : "Restored"} `,
 			deleted,
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+};
+export const getProduct = async (req, res) => {
+	const { id } = req.params;
+	try {
+		const product = await ProductModel.findById(id);
+		product.reviews = await ReviewModel.find({ productId: id }).sort({ createdAt: -1 }).limit(10);
+		return res.status(200).json({
+			success: true,
+			product,
 		});
 	} catch (error) {
 		return res.status(500).json({

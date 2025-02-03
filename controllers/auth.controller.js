@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User } from "../models/user.model.js";
+import { UserModel } from "../models/user.model.js";
 
 const createUser = async(req, res) =>{
 	const {userName, email, password} = req.body;
@@ -8,19 +8,21 @@ const createUser = async(req, res) =>{
 		return res.status(400).json({
 			success:false,
 			message: "Insufficient data for Registration!!",
+			title: "Registration Failed !",
 		});
 
 	try {
-		const userExists = await User.findOne({ email });
+		const userExists = await UserModel.findOne({ email });
 		if (Boolean(userExists))
 			return res.status(400).json({
 				success: false,
 				message: "User Already Exists",
+				title: "Registration Failed !",
 			});
 
 		const salt = await bcrypt.genSalt(12);
 		const hashedPwd = await bcrypt.hash(password, salt);
-		const userInstance = new User({ userName, email, password: hashedPwd });
+		const userInstance = UserModel.create({ userName, email, password: hashedPwd });
 
 		const savedUser = await userInstance.save();
 		return res.status(201).json({
@@ -29,10 +31,12 @@ const createUser = async(req, res) =>{
 			user: { ...savedUser, password: "" }
 		});
 
-	} catch(err){
+	} catch (error) {
+		console.log(error)
 		return res.status(500).json({
 			success: false,
-			message: "Registration Failed !",
+			message: error.message,
+			title: "Registration Failed !",
 		});
 	}
 }
@@ -45,7 +49,7 @@ const loginUser = async(req, res) =>{
 			message: "Insufficient data for Authentication!!",
 		});
 	try {
-		const foundUser = await User.findOne({ email: email }).exec();
+		const foundUser = await UserModel.findOne({ email: email }).exec();
 		if (!Boolean(foundUser))
 			return res.status(400).json({
 				success: false,

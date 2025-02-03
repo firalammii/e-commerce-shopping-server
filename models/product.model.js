@@ -18,6 +18,10 @@ const productSchema = mongoose.Schema({
 		required: true,
 		default: []
 	},
+	reviews: [{
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'reviews'
+	}],
 	imageURL: {
 		type: String,
 		required: true
@@ -30,19 +34,21 @@ const productSchema = mongoose.Schema({
 	salePrice: {
 		type: Number,
 		required: true,
-		default: 0,
 	},
 	amount: {
 		type: Number,
 		required: true,
 		default: 0,
 	},
+	deleted: {
+		type: Boolean,
+		default: false,
+	}
 },
 	{
 		timestamps: true
 	}
 );
 
-const Product = mongoose.model('products', productSchema);
+export const ProductModel = mongoose.model('products', productSchema);
 
-export default Product;
