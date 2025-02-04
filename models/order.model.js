@@ -6,7 +6,7 @@ const orderSchema = mongoose.Schema({
 			type: String,
 			required: true
 		},
-		name: {
+		userName: {
 			type: String,
 			required: true
 		},
@@ -19,13 +19,13 @@ const orderSchema = mongoose.Schema({
 		},
 	},
 
-	goods: [
+	items: [
 		{
 			productId: {
 				type: String,
 				required: true
 			},
-			amount: {
+			quantity: {
 				type: Number,
 				required: true,
 			},
@@ -54,6 +54,14 @@ const orderSchema = mongoose.Schema({
 	completed: {
 		type: Boolean,
 		default: false,
+	},
+	deleted: {
+		type: Boolean,
+		default: false,
+	},
+	totalPrice: {
+		type: Number,
+		required: true,
 	}
 },
 	{ timestamps: true }

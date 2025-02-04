@@ -8,7 +8,9 @@ import { corsOptions } from './config/corsOptions.js';
 import morgan from 'morgan';
 
 import authRoute from './routes/auth.route.js';
+import orderRoute from './routes/order.routes.js';
 import productRoute from './routes/admin/products.route.js';
+
 import mongoose from 'mongoose';
 
 dotenv.config();
@@ -29,6 +31,7 @@ app.get('/', (req, res) => res.json({ message: 'e-commerce server' }));
 
 app
 	.use('/api/auth', authRoute)
+	.use('/api/shop/orders', orderRoute)
 	.use('/api/admin/products', productRoute)
 
 const port = process.env.PORT || 3500;

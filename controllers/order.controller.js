@@ -20,31 +20,17 @@ import mongoose from "mongoose";
 // generateOrder();
 
 export const createOrder = async (req, res) => {
-	const { userId, name, address, productId, amount, totalPrice, paid, paymentMethod, paymentStatus, completed } = req.body;
-
-	const { error } = validateOrder({ userId, productId, amount, totalPrice, paid, paymentMethod, paymentStatus, });
+	const { customer, items, paymentMethod, paymentStatus, completed, totalPrice } = req.body;
+	const { userId, userName } = customer;
+	const { error } = validateOrder({ userId, userName, items, totalPrice, paymentMethod, paymentStatus, completed });
 	if (error) return res.status(200).json({
 		success: false,
 		message: error.message
 	});
 
-
 	try {
-
-		const product = await ProductModel.findById(productId);
-
-		const constructedOrder = {
-			customer: {
-				userId, name, address
-			},
-			goods: [
-				productId, amount, totalPrice, paid,
-			],
-			paymentMethod, paymentStatus, completed
-		};
-
-		const order = await OrderModel.create(extractedOrder);
-		const saved = await order.save(order);
+		const order = await OrderModel.create({ customer, items, paymentMethod, paymentStatus, completed, totalPrice });
+		const saved = await order.save();
 		return res.status(201).json({
 			success: true,
 			message: "order successfully completed",
@@ -62,13 +48,12 @@ export const createOrder = async (req, res) => {
 const validateOrder = (order) => {
 	const orderSchema = Joi.object({
 		userId: Joi.string().required(),
-		productId: Joi.string().required(),
-		amount: Joi.number().required(),
-		price_pp: Joi.number().required(),
+		userName: Joi.string().required(),
+		items: Joi.array().min(1).required(),
 		totalPrice: Joi.number().required(),
-		paid: Joi.boolean().required(),
 		paymentStatus: Joi.string().required(),
 		paymentMethod: Joi.string().required(),
+		completed: Joi.boolean(),
 	});
 
 	return orderSchema.validate(order);
